@@ -1,0 +1,354 @@
+﻿
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="stylesheet" href="css/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/bootstrap-responsive.min.css" />
+    
+    <meta charset="utf-8" />
+
+    <style type="text/css">
+        @media (min-width: 1200px) {  #map-canvas {
+                height: 600px;
+                width:960px;
+            }
+
+        }
+ 
+        /* Portrait tablet to landscape and desktop */
+        @media (min-width: 768px) and (max-width: 979px) { 
+
+            #map-canvas {
+                height: 500px;
+                width:680px;
+            }
+        }
+ 
+        /* Landscape phone to portrait tablet */
+        @media (max-width: 767px) { #map-canvas {
+                height: 400px;
+                width:400px;
+            }
+
+        }
+ 
+        /* Landscape phones and down */
+        @media (max-width: 480px) { 
+        #map-canvas {
+                height: 300px;
+                width:250px;
+            }
+        }
+        
+        .floatleft {
+            float:left;
+        }
+
+        .floatright {
+            float:right;
+        }
+        
+        
+        .clear {
+            clear:both;
+        }
+        .label {
+            padding: 9px 7px;
+            line-height: 1em;
+            margin-right: 2px;
+        }
+        #directionsPanel {
+            height:400px !important; overflow:auto ;
+        }
+        #rightPanel {
+            margin: 0px 10px;
+            border:1px solid #ddd;
+        }
+
+
+    </style>
+
+    <title></title>
+
+     <script type="text/javascript"
+            src="https://maps.googleapis.com/maps/api/js?sensor=false">
+     </script>
+    <script>
+
+        var flag = 0;  //global variable
+
+        var TotalDistance ;
+        var TotalDuration ;
+        var k
+        var i;
+        
+    
+        var directionsDisplay;
+        var directionsService = new google.maps.DirectionsService();
+        var map;
+
+        function reset1() {
+
+            //alert("reset");
+            document.getElementById("myform").reset();
+            k = 0;
+            TotalDistance = 0;
+            TotalDuration = 0;
+
+            directionsDisplay = new google.maps.DirectionsRenderer();
+            var defaultPos = new google.maps.LatLng(0, 0);
+            var mapOptions =
+             {
+                  zoom: 7,
+                  center: defaultPos
+              }
+            map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
+            directionsDisplay.setMap(map);
+            document.getElementById("directionsPanel").innerHTML = "";
+            document.getElementById("distance").innerHTML = "Total Distance:" + TotalDistance + " miles";
+            document.getElementById("duration").innerHTML = "Total Duration:" + TotalDuration + "seconds";
+
+        }
+
+            function initialize() {
+
+                k = 0;
+                TotalDistance = 0;
+                TotalDuration = 0;
+
+                console.log("entering  initialize");
+
+                var origin = document.getElementById("Text1").value;
+                var address1 = document.getElementById("Text2").value;
+                var address2 = document.getElementById("Text3").value;
+                var address3 = document.getElementById("Text4").value;
+                var address4 = document.getElementById("Text5").value;
+
+                console.log(address1, address2, address3, address4);
+
+
+                var start1 = [origin];
+                var end1 = [address1, address2, address3, address4];
+
+                directionsDisplay = new google.maps.DirectionsRenderer();
+                var defaultPos = new google.maps.LatLng(0, 0);
+                var mapOptions =
+                    {
+                        zoom: 7,
+                        center: defaultPos
+                    }
+                map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
+                directionsDisplay.setMap(map);
+                document.getElementById("directionsPanel").innerHTML = "";
+                document.getElementById("distance").innerHTML= "Total Distance:" + TotalDistance + " miles";
+                document.getElementById("duration").innerHTML = "Total Duration:" + TotalDuration + "seconds";
+                multiple(start1, end1);
+            }
+
+  
+            function multiple(start2, end2) {
+
+                console.log("entering multiple");
+
+                var request2 = {
+                    origins: start2,
+                    destinations: end2,
+                    travelMode: google.maps.TravelMode.DRIVING
+                };
+
+                var service = new google.maps.DistanceMatrixService();
+                service.getDistanceMatrix(request2, callback);
+
+                function callback(response, status2) {
+          
+                    if (status2 == google.maps.DistanceMatrixStatus.OK) {
+
+                        var origin = response.originAddresses[0];
+                        var destCount = response.destinationAddresses;
+
+                        console.log(destCount.length);
+
+                        var minDis = Infinity;
+                        for (i = 0; i < destCount.length ; i++) {
+                            if (response.rows[0].elements[i].status == "OK") {
+                                var findMin = response.rows[0].elements[i].distance.value;
+                                if (findMin < minDis) {
+                                    minDis = findMin;
+                                    var index = i;
+                                    var newOrigin = [request2.destinations[index]];
+                                }
+
+                            } // status check
+
+                            else {
+
+                                alert(response.rows[0].elements[i].status);
+                                return;
+
+                            }
+
+                        }
+                        TotalDuration = TotalDuration + response.rows[0].elements[index].duration.value;
+                        TotalDistance = TotalDistance + minDis;
+
+                        console.log("Total duration is :", TotalDuration);
+                        console.log("Total distance is :", TotalDistance);
+
+
+                        console.log(" minimum distance ", newOrigin);
+                        console.log("flag vlue", flag);
+
+                        calcRoute(origin, response.destinationAddresses[index], function (result) {
+                            console.log("Callback Results::", result);
+                            if (result != 0) {
+                                flag = 1;
+
+                                if (flag == 1) {
+
+                                    //alert("Going to next location");
+                                    //build new request with destination one less 
+
+                                    var newStart = [newOrigin[0]];
+
+                                    var newDestination = [];
+                                    for (var j = 0; j < request2.destinations.length; j++) {
+                                        if (request2.destinations[j] !== newOrigin[0])
+                                            newDestination.push(request2.destinations[j]);
+                                    }
+                                    console.log(" checking new length ");
+                                    console.log(newDestination.length);
+
+                                    var displayDistance = document.getElementById("distance");
+                                    displayDistance.innerHTML = "Total Distance:" + Math.round((TotalDistance) * 0.000621) + " miles";
+
+                                    var displayDuration = document.getElementById("duration");
+                                    var days = parseInt((TotalDuration / 3600) / 24);
+                                    var hours = parseInt(TotalDuration / 3600) % 24;
+                                    var minutes = parseInt(TotalDuration / 60) % 60;
+                                    var seconds = TotalDuration % 60;
+
+                                    var result = (days < 10 ? "0" + days : days) + " day" + (hours < 10 ? "0" + hours : hours) + " hrs " + (minutes < 10 ? "0" + minutes : minutes) + " mins " + (seconds < 10 ? "0" + seconds : seconds) + " secs  ";
+                                    displayDuration.innerHTML = "Total duration:" + result;
+
+                                    if (newDestination.length >= 1)
+
+                                        //recursive call to multiple function
+                                        multiple(newStart, newDestination);
+
+                                }
+                            }
+
+                        });
+                        console.log("flag value after calc route", flag);
+
+                    } // flag if 
+
+                    else
+                    {
+                        alert(status2);
+                        return;
+                   
+                    }
+                } //callback ends
+
+            } // multiple ends 
+
+            function calcRoute(start3, end3, callback)
+            {
+                console.log("entering calcRoute");
+                var request = {
+                    origin: start3,
+                    destination: end3,
+                    travelMode: google.maps.TravelMode.DRIVING
+                };
+
+                var result;
+                console.log("entering calcRoute sec part ");
+                //flag = 1;
+                directionsService.route(request, function (result, status) {
+
+                    console.log("entering calcRoute third part");
+                    console.log("flag value at third", flag);
+
+                    if (status == google.maps.DirectionsStatus.OK) {
+
+                        k ++;
+
+                        var directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: true });
+                        var marker1 = new google.maps.Marker({
+                            position: result.routes[0].legs[0].steps[0].start_location,
+                            title: result.routes[0].legs[0].start_address,
+                            icon: 'https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=' + (k) + '|FF776B|000000',
+                            map :map
+                        });
+
+                        directionsRenderer.setMap(map);
+                        directionsRenderer.setDirections(result);
+                        directionsRenderer.setPanel(document.getElementById("directionsPanel"));
+
+                    }
+
+                    else
+                    {
+                        alert(status);
+                        return;
+
+                    }
+
+                    console.log(result.routes[0].legs[0].start_address);
+                    console.log(result.routes[0].legs[0].end_address);
+                    console.log(result.routes[0].legs[0].steps[0].start_location, result.routes[0].legs[0].steps[0].end_location);
+
+                    callback(result);
+                });
+            
+            
+            }// calcRoute ends
+
+     </script>
+
+   
+</head>
+<body>
+    <div class="left-panel floatleft" id="leftPanel">
+        <div id="input from user" class="floatleft" style ="width:300px ;"> 
+            <h3 class="text-center text-info" >Enter your inputs</h3> 
+             <form id ="myform" name="demo">
+
+                  <div class="input-wrapper" id="inputWrapper">
+                 <label class="label floatleft text-info btn-warning">Origin  : </label><input class="floatleft" type="text" id="Text1" placeholder="Origin" name="origin"/><br/>
+                      <div class="clear"></div>
+                 <label class="label floatleft text-info btn-warning">address1: </label><input class="floatleft" type="text" id="Text2" placeholder="Address 1" name="address1"/><br />
+                      <div class="clear"></div>
+                 <label class="label floatleft text-info btn-warning">address2: </label><input class="floatleft" type="text" id="Text3" placeholder="Address 2" name="address2"/><br />
+                      <div class="clear"></div>
+                 <label class="label floatleft text-info btn-warning">address3: </label><input class="floatleft" type="text"id="Text4" placeholder="Address 3" name="address3"/><br />
+                      <div class="clear"></div>
+                 <label class="label floatleft text-info btn-warning">address4: </label><input class="floatleft" type="text"id="Text5"  placeholder="Address 4" name="address4" /><br />
+                      <div class="clear"></div>
+                 </div>
+              
+                  <input type="button" class ="btn btn-primary floatright"  value="SUBMIT" onclick = "initialize()" />
+                   <div class="clear"></div>
+             </form>
+
+                  <input type="button" class="add-field btn btn-info floatright text-center" id="Button1" title="reset" value= "Reset" onclick = "reset1()" />
+            <div class="clear"></div>
+       </div>
+        <div class="clear"></div>
+         <div id ="distance" class="floatleft lead"></div>   
+         <div class="clear"></div>
+         <div id ="duration" class="floatleft lead"></div>
+         <div class="clear"></div>
+         <div id="directionsPanel" class="floatleft" style="clear:both; width:300px;height:200px"></div>
+   
+   </div>    
+    <div class="right-panel floatleft" id="rightPanel">
+     <div id="map-canvas" class="map-canvas-wrapper"></div>
+    </div>
+
+ 
+   
+</body>
+</html>
